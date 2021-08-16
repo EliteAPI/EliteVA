@@ -66,10 +66,10 @@ jobs:
       uses: actions/checkout@v2
     
     - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@vlatest
     
     - name: Setup NuGet
-      uses: NuGet/setup-nuget@v1.0.2
+      uses: NuGet/setup-nuget@latest
         
     - name: Restore dependencies
       run: nuget restore EliteVA.sln
@@ -82,7 +82,7 @@ jobs:
         msbuild.exe EliteVA.sln /nologo /nr:false /p:DeleteExistingFiles=True /p:platform="Any CPU" /p:configuration="Release" /p:PublishUrl="../_build"
       
     - name: Upload build artifact
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@latest
       with:
         name: EliteVA v{{steps.VERSION.outputs.semver}}
         path: ./_build
