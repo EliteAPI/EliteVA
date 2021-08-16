@@ -67,17 +67,22 @@ jobs:
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 4.7.2
+    
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.0.2
         
     - name: Restore dependencies
-      run: dotnet restore
+      run: nuget restore EliteVA.sln
       
-    - name: Build
-      run: dotnet build --no-restore -c Release -o build
+    - name: Create Build Directory
+      run: mkdir _build
+      
+    - name: Build Solution
+      run: |
+        msbuild.exe EliteVA.sln /nologo /nr:false /p:DeleteExistingFiles=True /p:platform="Any CPU" /p:configuration="Release" /p:PublishUrl="../_build"
       
     - name: Upload build artifact
       uses: actions/upload-artifact@v2.2.4
       with:
         name: EliteVA v{{steps.VERSION.outputs.semver}}
-        path: build
+        path: ./_build
