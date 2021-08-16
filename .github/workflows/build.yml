@@ -48,10 +48,8 @@ jobs:
           echo '::set-output name=label::${{env.GitVersion_PreReleaseLabel}}'
           echo '::set-output name=semver::${{env.GitVersion_LegacySemVer}}'
           echo '::set-output name=nuget::${{env.GitVersion_NuGetPreReleaseTagV2}}'
-          echo '::set-output name=applicable::${{env.GitVersion_PreReleaseLabel == 'alpha' || env.GitVersion_PreReleaseLabel == 'beta' }}'
           
       - name: Apply changes
-        if: ${{ steps.VERSION.outputs.applicable == 'true' || steps.extract_branch.outputs.branch == 'main' }}
         uses: EndBug/add-and-commit@v6.2.0
         with:
           author_name: github-actions[bot]
@@ -70,7 +68,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.x
+        dotnet-version: 4.7.2
         
     - name: Restore dependencies
       run: dotnet restore
