@@ -1,0 +1,85 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, dev ]
+
+jobs:
+  update-version:
+    name: update version
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{steps.VERSION.outputs.label}}
+      semver: ${{steps.VERSION.outputs.semver}}
+      nuget: ${{steps.VERSION.outputs.nuget}}
+      applicable: ${{steps.VERSION.outputs.applicable}}
+      
+    steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+
+      - name: Setup GitVersion
+        run: dotnet tool install --global GitVersion.Tool --version 5.6.0
+
+      - name: Fetch for GitVersion
+        run: git fetch --tags --unshallow
+
+      - name: Fetch main for GitVersion
+        if: github.ref != 'refs/heads/main'
+        run: git branch --create-reflog main origin/main
+
+      - name: Update version
+        run: dotnet-gitversion /updateprojectfiles /updateassemblyinfo /output buildserver
+
+      - name: Set job output
+        id: VERSION
+        run: |
+          echo '::set-output name=label::${{env.GitVersion_PreReleaseLabel}}'
+          echo '::set-output name=semver::${{env.GitVersion_LegacySemVer}}'
+          echo '::set-output name=nuget::${{env.GitVersion_NuGetPreReleaseTagV2}}'
+          echo '::set-output name=applicable::${{env.GitVersion_PreReleaseLabel == 'alpha' || env.GitVersion_PreReleaseLabel == 'beta' }}'
+          
+      - name: Apply changes
+        if: ${{ steps.VERSION.outputs.applicable == 'true' || steps.extract_branch.outputs.branch == 'main' }}
+        uses: EndBug/add-and-commit@v6.2.0
+        with:
+          author_name: github-actions[bot]
+          author_email: github-actions[bot]@users.noreply.github.com
+          message: "Bumped version to ${{env.GitVersion_LegacySemVer}}"
+
+  release:
+    needs: [ update-version ]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --no-restore -c Release -o build
+      
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: EliteVA v{{steps.VERSION.outputs.semver}}
+        path: build
