@@ -1,0 +1,130 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, dev ]
+
+jobs:
+  update-version:
+    name: update version
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{steps.VERSION.outputs.label}}
+      semver: ${{steps.VERSION.outputs.semver}}
+      nuget: ${{steps.VERSION.outputs.nuget}}
+      applicable: ${{steps.VERSION.outputs.applicable}}
+      
+    steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+
+      - name: Setup GitVersion
+        run: dotnet tool install --global GitVersion.Tool --version 5.6.0
+
+      - name: Fetch for GitVersion
+        run: git fetch --tags --unshallow
+
+      - name: Fetch main for GitVersion
+        if: github.ref != 'refs/heads/main'
+        run: git branch --create-reflog main origin/main
+
+      - name: Update version
+        run: dotnet-gitversion /updateprojectfiles /updateassemblyinfo /output buildserver
+
+      - name: Set job output
+        id: VERSION
+        run: |
+          echo '::set-output name=label::${{env.GitVersion_PreReleaseLabel}}'
+          echo '::set-output name=semver::${{env.GitVersion_LegacySemVer}}'
+          echo '::set-output name=nuget::${{env.GitVersion_NuGetPreReleaseTagV2}}'
+          
+      - name: Apply changes
+        uses: EndBug/add-and-commit@v6.2.0
+        with:
+          author_name: github-actions[bot]
+          author_email: github-actions[bot]@users.noreply.github.com
+          message: "Bumped version to ${{env.GitVersion_LegacySemVer}}"
+
+  build:
+    needs: [ update-version ]
+    runs-on: windows-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+        
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v1.0.2
+    
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.0.5
+
+    - name: Restore NuGet Packages
+      run: nuget restore EliteVA.sln
+
+    - name: Restore the application
+      run: msbuild EliteVA /t:Restore /p:Configuration=Release
+      
+    - name: Create the app package
+      run: msbuild EliteVA /p:Configuration=Release
+
+    - name: Upload artifact 
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: eliteva
+        path: EliteVA/bin/Release
+
+  release:
+    needs: [ update-version, build ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: eliteva
+        path: eliteva
+    
+    - name: Zip files
+      uses: montudor/action-zip@v1.0.0
+      with:
+        args: zip -qq -r eliteva.zip eliteva
+   
+    - name: Create new release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.update-version.outputs.semver }}
+        release_name: v${{ needs.update-version.outputs.semver }}
+        body: |
+          # ${{ github.event.repository.name }} v${{ needs.update-version.outputs.semver }} has been released
+        draft: false
+        prerelease: ${{ env.GitVersion_PreReleaseLabel != '' }}
+   
+    - name: Upload setup
+      uses: actions/upload-release-asset@v1
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: eliteva.zip
+        asset_name: eliteva.zip
+        asset_content_type: application/zip
