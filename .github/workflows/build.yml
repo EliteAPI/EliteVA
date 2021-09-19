@@ -69,8 +69,15 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
+        
     - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v1.0.2
+    
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.0.2
+
+    - name: Restore NuGet Packages
+      run: nuget restore EliteVA.sln
 
     - name: Restore the application
       run: msbuild EliteVA /t:Restore /p:Configuration=Release
