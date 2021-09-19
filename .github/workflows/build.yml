@@ -85,8 +85,31 @@ jobs:
     - name: Create the app package
       run: msbuild EliteVA /p:Configuration=Release
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
+    - name: Zip files
+      uses: montudor/action-zip@v1.0.0
       with:
-        name: EliteVA
-        path: EliteVA/bin/Release
+        args: zip -qq -r eliteva.zip EliteVA/bin/Release
+
+    
+    - name: Create new release
+      id: RELEASE
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.update-version.outputs.semver }}
+        release_name: v${{ needs.update-version.outputs.semver }}
+        body: |
+          # ${{ github.event.repository.name }} v${{ needs.update-version.outputs.semver }} has been released
+        draft: false
+        prerelease: ${{ env.GitVersion_PreReleaseLabel != '' }}
+   
+    - name: Upload setup
+      uses: actions/upload-release-asset@v1
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.RELEASE.outputs.url }} 
+        asset_path: eliteva.zip
+        asset_name: eliteva.zip
+        asset_content_type: application/zip
