@@ -56,7 +56,7 @@ jobs:
           author_email: github-actions[bot]@users.noreply.github.com
           message: "Bumped version to ${{env.GitVersion_LegacySemVer}}"
 
-  release:
+  build:
     needs: [ update-version ]
     runs-on: windows-latest
     if: github.ref == 'refs/heads/main'
@@ -85,12 +85,27 @@ jobs:
     - name: Create the app package
       run: msbuild EliteVA /p:Configuration=Release
 
+    - name: Upload artifact 
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: eliteva
+        path: EliteVA/bin/Release
+
+  release:
+    needs: [ update-version, build ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v2.0.10
+      with:
+        name: eliteva
+        path: eliteva
+    
     - name: Zip files
       uses: montudor/action-zip@v1.0.0
       with:
-        args: zip -qq -r eliteva.zip EliteVA/bin/Release
-
-    
+        args: zip -qq -r eliteva.zip eliteva
+   
     - name: Create new release
       id: RELEASE
       uses: actions/create-release@v1
