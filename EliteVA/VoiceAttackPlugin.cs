@@ -36,16 +36,16 @@ namespace EliteVA
             _socket.Opened += SocketOpened;
             _socket.Error += SocketError;
             _socket.Closed += SocketClosed;
-            _socket.MessageReceived += SocketMessage;
+            _socket.MessageReceived += async (sender, e) => await SocketMessage(e);
 
             _hasConnected = false;
             Log("Connecting to EliteAPI Hub ...", VoiceAttackColor.Gray);
             _socket.Open();
         }
 
-        private static void SocketMessage(object sender, MessageReceivedEventArgs e)
+        private static async Task SocketMessage(MessageReceivedEventArgs e)
         {
-            ReceivedMessage(JsonConvert.DeserializeObject<WebSocketMessage>(e.Message));
+            await ReceivedMessage(JsonConvert.DeserializeObject<WebSocketMessage>(e.Message));
         }
 
         private static void SocketClosed(object sender, EventArgs e)
@@ -95,7 +95,7 @@ namespace EliteVA
             _socket.Send(JsonConvert.SerializeObject(message));
         }
 
-        private static void ReceivedMessage(WebSocketMessage message)
+        private static async Task ReceivedMessage(WebSocketMessage message)
         {
             dynamic value;
             try
@@ -139,7 +139,11 @@ namespace EliteVA
                         if (_hasCaughtUp)
                         {
                             //Log($"Invoking ((EliteAPI.{eventValue.Name}))", VoiceAttackColor.Pink);
-                            _proxy.Commands.Invoke($"((EliteAPI.{eventValue.Name}))");
+                            var commandName = $"((EliteAPI.{eventValue.Name}))";
+                            if(await _proxy.Commands.Exists(commandName))
+                            {
+                                await _proxy.Commands.Invoke(commandName);
+                            }
                         }
                     }
                     catch (Exception ex)
