@@ -153,7 +153,7 @@ namespace EliteVA
 
                     break;
 
-                default:
+                case "Bindings":
                     Log($"[{message.Type}] {value}", VoiceAttackColor.Yellow);
                     break;
             }
