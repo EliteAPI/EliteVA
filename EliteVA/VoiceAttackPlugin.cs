@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Threading;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using EliteVA.Models;
+using EliteVA.Processors;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SuperSocket.ClientEngine;
 using Valsom.VoiceAttack;
 using Valsom.VoiceAttack.Log;
@@ -38,7 +38,7 @@ namespace EliteVA
             _socket.Closed += SocketClosed;
             _socket.MessageReceived += async (sender, e) => await SocketMessage(e);
 
-            _hasConnected = false;
+            _hasConnected = false; 
             Log("Connecting to EliteAPI Hub ...", VoiceAttackColor.Gray);
             _socket.Open();
         }
@@ -135,7 +135,7 @@ namespace EliteVA
                     try
                     {
                         var eventValue = JsonConvert.DeserializeObject<Event>(message.Value);
-                        eventValue.Variables.ForEach(SetVariable);
+                        eventValue.Variables.ForEach(x => SetVariable(x));
                         if (_hasCaughtUp)
                         {
                             //Log($"Invoking ((EliteAPI.{eventValue.Name}))", VoiceAttackColor.Pink);
@@ -154,15 +154,19 @@ namespace EliteVA
                     break;
 
                 case "Bindings":
-                    Log($"[{message.Type}] {value}", VoiceAttackColor.Yellow);
+                    // To convert an XML node contained in string xml into a JSON string   
+                    List<Variable> bindings = BindingsProcessor.SetBindings(value);
+                    bindings.ForEach(x => SetVariable(x));
                     break;
             }
         }
 
-        private static void SetVariable(Variable variable)
+        private static void SetVariable(Variable variable, bool log = false)
         {
             try
             {
+                variable.Name = "EliteAPI." + variable.Name;
+                
                 switch (variable.Type)
                 {
                     case "string":
@@ -189,17 +193,34 @@ namespace EliteVA
                         break;
                 }
 
-                //Log($"Set {variable.Name} to {variable.Value} ({variable.Type})", VoiceAttackColor.Pink);
+                if (log)
+                {
+                    Log($"Set {variable.Name} to {variable.Value} ({variable.Type})", VoiceAttackColor.Pink);
+                }
             }
             catch (Exception ex)
             {
-                Log($"Could not set {variable.Name} to '{variable.Value}': {ex.Message} ({ex.GetType().Name})");
+                Log($"Could not set {variable.Name} to '{variable.Value}'. {GetPrettyExceptionName(ex)}: {ex.Message}");
             }
         }
 
-        private static void Log(string message, VoiceAttackColor color = VoiceAttackColor.Purple)
+        public static void Log(string message, VoiceAttackColor color = VoiceAttackColor.Purple)
         {
             _proxy.Log.Write($"[EliteAPI] {message}", color);
+        }
+        
+        public static void Log(Exception ex, string message, VoiceAttackColor color = VoiceAttackColor.Red)
+        {
+            _proxy.Log.Write($"[EliteAPI] ({GetPrettyExceptionName(ex)}: {ex.Message}) {message}", color);
+        }
+        
+        private static string GetPrettyExceptionName(Exception ex)
+        {
+            var output = Regex.Replace(ex.GetType().Name, @"\p{Lu}", m => " " + m.Value.ToLowerInvariant());
+            output = ex.GetType().Name == "Exception" ? "Exception" : output.Replace("exception", "");
+            output = output.Trim();
+            output = char.ToUpperInvariant(output[0]) + output.Substring(1);
+            return output;
         }
     }
 }

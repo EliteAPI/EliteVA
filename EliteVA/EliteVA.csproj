@@ -171,6 +171,7 @@
         <Reference Include="System.Windows" />
         <Reference Include="System.Windows.Forms" />
         <Reference Include="System.Xml" />
+        <Reference Include="System.Xml.Linq" />
         <Reference Include="Valsom.VoiceAttack, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null">
           <HintPath>..\packages\Valsom.VoiceAttack.0.1.0-alpha0022\lib\netstandard2.0\Valsom.VoiceAttack.dll</HintPath>
           <Private>True</Private>
@@ -184,12 +185,22 @@
     <ItemGroup>
         <Compile Include="Models\Event.cs" />
         <Compile Include="Models\Variable.cs" />
+        <Compile Include="Paths.cs" />
+        <Compile Include="Processors\BindingsProcessor.cs" />
         <Compile Include="VoiceAttackPlugin.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="WebSocketMessage.cs" />
     </ItemGroup>
     <ItemGroup>
       <None Include="packages.config" />
+    </ItemGroup>
+    <ItemGroup>
+      <Content Include="Mappings\en-GB.yml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="Mappings\en-US.yml">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
