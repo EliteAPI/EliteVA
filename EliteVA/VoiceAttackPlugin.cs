@@ -1,16 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using EliteVA.Models;
 using EliteVA.Processors;
 using Newtonsoft.Json;
-using SuperSocket.ClientEngine;
 using Valsom.VoiceAttack;
 using Valsom.VoiceAttack.Log;
 using WebSocket4Net;
+using ErrorEventArgs = SuperSocket.ClientEngine.ErrorEventArgs;
 
 namespace EliteVA
 {
@@ -30,6 +32,9 @@ namespace EliteVA
 
         public static void VA_Init1(dynamic vaProxy)
         {
+            Directory.CreateDirectory(Paths.VariablesDirectory.FullName);
+            File.WriteAllText(Path.Combine(Paths.VariablesDirectory.FullName, "Event.txt"), string.Empty);
+            
             _proxy = new VoiceAttackProxy(vaProxy);
             _socket = new WebSocket("ws://localhost:51555/ws", "EliteAPI-plugin");
 
@@ -135,7 +140,7 @@ namespace EliteVA
                     try
                     {
                         var eventValue = JsonConvert.DeserializeObject<Event>(message.Value);
-                        eventValue.Variables.ForEach(x => SetVariable(x));
+                        SetVariables(eventValue.Variables, message.Type);
                         if (_hasCaughtUp)
                         {
                             //Log($"Invoking ((EliteAPI.{eventValue.Name}))", VoiceAttackColor.Pink);
@@ -156,12 +161,36 @@ namespace EliteVA
                 case "Bindings":
                     // To convert an XML node contained in string xml into a JSON string   
                     List<Variable> bindings = BindingsProcessor.SetBindings(value);
-                    bindings.ForEach(x => SetVariable(x));
+                    SetVariables(bindings, "Bindings");
                     break;
             }
         }
 
-        private static void SetVariable(Variable variable, bool log = false)
+        private static void SetVariables(IList<Variable> variables, string category, bool log = false)
+        {
+            try
+            {
+                Directory.CreateDirectory(Paths.VariablesDirectory.FullName);
+                if (category != "Event")
+                {
+                    File.WriteAllLines(Path.Combine(Paths.VariablesDirectory.FullName, category + ".txt"),
+                        variables.Select(x => $"{{{x.Type}:EliteAPI.{x.Name}}}: {x.Value}"));
+                }
+                else
+                {
+                    File.AppendAllLines(Path.Combine(Paths.VariablesDirectory.FullName, category + ".txt"),
+                        variables.Select(x => $"{{{x.Type}:EliteAPI.{x.Name}}}: {x.Value}"));
+                }
+               
+                variables.ToList().ForEach(x => SetVariable(x, log));
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Could not set variables for {category}");
+            }
+        }
+        
+        private static void SetVariable(Variable variable, bool log)
         {
             try
             {

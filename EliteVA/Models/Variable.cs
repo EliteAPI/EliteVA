@@ -8,6 +8,7 @@ namespace EliteVA.Models
         [JsonConstructor]
         public Variable()
         {
+            
         }
         
         public Variable(string name, object value, string type)
@@ -21,42 +22,42 @@ namespace EliteVA.Models
         {
             Name = name;
             Value = value;
-            Type = "string";
+            Type = "TXT";
         }
 
         public Variable(string name, int value)
         {
             Name = name;
             Value = value;
-            Type = "int32";
+            Type = "INT";
         }
 
         public Variable(string name, long value)
         {
             Name = name;
             Value = value;
-            Type = "int64";
+            Type = "DEC";
         }
 
         public Variable(string name, decimal value)
         {
             Name = name;
             Value = value;
-            Type = "decimal";
+            Type = "DEC";
         }
 
         public Variable(string name, DateTime value)
         {
             Name = name;
             Value = value;
-            Type = "date";
+            Type = "DATE";
         }
 
         public Variable(string name, bool value)
         {
             Name = name;
             Value = value;
-            Type = "boolean";
+            Type = "BOOL";
         }
 
         public string Name { get; set; }
