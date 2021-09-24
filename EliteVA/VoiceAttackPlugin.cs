@@ -174,12 +174,12 @@ namespace EliteVA
                 if (category != "Event")
                 {
                     File.WriteAllLines(Path.Combine(Paths.VariablesDirectory.FullName, category + ".txt"),
-                        variables.Select(x => $"{{{x.Type}:EliteAPI.{x.Name}}}: {x.Value}"));
+                        variables.Select(x => $"{{{x.GetType()}:EliteAPI.{x.Name}}}: {x.Value}"));
                 }
                 else
                 {
                     File.AppendAllLines(Path.Combine(Paths.VariablesDirectory.FullName, category + ".txt"),
-                        variables.Select(x => $"{{{x.Type}:EliteAPI.{x.Name}}}: {x.Value}"));
+                        variables.Select(x => $"{{{x.GetType()}:EliteAPI.{x.Name}}}: {x.Value}"));
                 }
                
                 variables.ToList().ForEach(x => SetVariable(x, log));
