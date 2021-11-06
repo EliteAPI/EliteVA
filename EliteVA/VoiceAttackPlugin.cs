@@ -212,9 +212,7 @@ namespace EliteVA
                         break;
 
                     case "date":
-                        _proxy.Variables.Set(variable.Name,
-                            DateTime.ParseExact(variable.Value.ToString(), "d-M-yyyy HH:mm:ss",
-                                CultureInfo.InvariantCulture));
+                        _proxy.Variables.Set(variable.Name, DateTime.Parse(variable.Value.ToString()));
                         break;
 
                     case "boolean":
