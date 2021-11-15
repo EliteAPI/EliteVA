@@ -78,7 +78,7 @@ namespace EliteVA
         {
             _hasConnected = true;
             Log("Authenticating with EliteAPI Hub", VoiceAttackColor.Gray);
-            SendMessage(new WebSocketMessage("auth", "plugin"));
+            SendMessage(new WebSocketMessage("auth", "EliteVA"));
         }
 
         public static void VA_Exit1(dynamic vaProxy)
